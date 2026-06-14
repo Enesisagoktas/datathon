@@ -1,0 +1,10 @@
+# BTK Datathon 2026 - career_success_score pipeline
+# Python 3.14 uyumlu sürümler (wheel'ler mevcut).
+numpy==2.4.6
+pandas==3.0.3
+scikit-learn==1.9.0
+scipy==1.17.1
+lightgbm==4.6.0
+xgboost==3.2.0
+catboost==1.2.10
+optuna==4.9.0
