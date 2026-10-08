@@ -1,45 +1,44 @@
-# BTK Datathon 2026 — career_success_score Çözümü
+# BTK Datathon 2026 — Kariyer Başarı Skoru Tahmini
 
-## Görev
-`test_x.csv` içindeki öğrenciler için `career_success_score` (0–100, sürekli) tahmini. Metrik: **MSE**.
+BTK Datathon 2026 için 2 kişilik ekip olarak hazırladığımız çözüm. Amaç, öğrencilerin akademik, teknik ve sosyal verilerinden `career_success_score` (0–100) değerini tahmin etmek. Değerlendirme metriği MSE.
 
-## Kullanılan Modeller
+## Yaklaşım
 
-- **CatBoostRegressor** — sayısal + mühendislik özellikleri + **native kategorik** + TF-IDF SVD; RMSE loss, early stopping.
-- **LightGBMRegressor** — sayısal + mühendislik + kodlanmış kategorik + SVD; early stopping.
-- **XGBoostRegressor** — LightGBM ile aynı matris; early stopping.
-- **TF-IDF Ridge** — `mentor_feedback_text` üzerinde word(1,2)+char_wb(3,5) TF-IDF → Ridge (alpha=10, ölçeklemesiz; ensemble'da stacking üyesi).
+- 47 ham kolondan 91 özellik türetildi: akademik ortalamalar, beceri skorlarının istatistikleri, mülakat ve proje göstergeleri, eksik değer bayrakları
+- Mentor geri bildirim metni için TF-IDF + SVD
+- CatBoost, LightGBM, XGBoost ve Ridge modelleri, 10 katlı stratified cross-validation
+- Modeller ağırlıklı ortalama ile birleştirildi; tüm dönüşümler fold içinde yapıldı (veri sızıntısı yok)
 
-## Özellik Mühendisliği (özet)
+## Sonuçlar (CV MSE)
 
-Akademik (years_to_graduation, academic_mean, attendance_failed_interaction…), teknik beceri agregasyonları (mean/max/min/std/range/sum), soft-skill agregasyonları, mülakat & kariyer hazırlığı (interview_mean, interview_gap, career_readiness_mean), proje/deneyim (github_power, opensource_power, hackathon_success_rate, internship_intensity…), başvuru verimliliği (interview_rate…), `role_match_score` (target_role'a göre ağırlıklı teknik skor), oran/etkileşim (technical_soft_ratio, career_total_score, balanced_profile_score) ve bilgi taşıyan eksiklik için `*_was_missing` bayrakları.
-
-## CV Stratejisi
-
-- `StratifiedKFold` (n_splits=10), hedef `pd.qcut` ile 10 bine ayrılarak stratifiye edildi.
-- Tüm TF-IDF/SVD/metin modeli **fold içinde** fit edildi → data leakage yok.
-- Test tahmini fold ortalaması; tahminler [0,100] aralığına clip edildi.
-- Hiperparametreler Optuna ile (iç 3-fold CV) OOF MSE'ye göre seçildi; public leaderboard'a göre ayar yapılmadı.
-
-## Skorlar (OOF / CV MSE)
-
-| Aşama / Model | CV MSE |
+| Model | MSE |
 |---|---|
-| Varyans baseline (ortalama tahmin) | 230.612 |
-| Baseline LightGBM (FE/metin yok) | 85.592 |
-| catboost | 79.680 |
-| lgbm | 79.306 |
-| xgb | 80.728 |
-| ridge | 145.025 |
-| **Ensemble (final)** | **78.423** |
+| Ortalama tahmin (baseline) | 230.61 |
+| LightGBM, özellik mühendisliği olmadan | 85.59 |
+| CatBoost | 79.68 |
+| LightGBM | 79.31 |
+| XGBoost | 80.73 |
+| **Ensemble** | **78.42** |
 
-## Final Ensemble Ağırlıkları
+Ayrıntılı analiz: [ANALYSIS.md](ANALYSIS.md)
 
-- catboost: 0.424
-- lgbm: 0.482
-- xgb: 0.073
-- ridge: 0.021
+## Çalıştırma
 
-## Kurallara Uygunluk
+Yarışma verilerini (`train.csv`, `test_x.csv`, `sample_submission.csv`) proje klasörüne koyun. Veri seti repoya eklenmedi.
 
-Test seti elle etiketlenmedi, hedef-tahmin hilesi yapılmadı, data leakage yok (tüm fit fold-içi), dışarıdan gizli veri kullanılmadı, başka takımlardan kod/veri alınmadı, public leaderboard'a göre manuel ayar yapılmadı. `student_id` modelde kullanılmadı (leakage analizi: korelasyon ≈ −0.009).
+```bash
+pip install -r requirements.txt
+python pipeline.py      # modelleri eğitir, submission.csv üretir
+python smoke_test.py    # küçük veriyle hızlı kontrol
+```
+
+## Dosyalar
+
+| Dosya | İçerik |
+|---|---|
+| `pipeline.py` | Veri hazırlama, özellik mühendisliği, eğitim ve ensemble |
+| `improve_v2.py` | Kayıtlı tahminlere ek modellerle blend denemesi |
+| `screen_models.py` | Ensemble'a eklenecek aday modellerin taranması |
+| `smoke_test.py` | Küçük veriyle hızlı test |
+| `model_scores.csv` | Modellerin CV skorları |
+| `feature_importance_*.csv` | Özellik önemleri |

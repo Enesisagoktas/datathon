@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.pyc
+
+# Model çıktıları
+catboost_info/
+
+# Veri ve tahmin dosyaları (sonuç tabloları hariç)
+*.csv
+!model_scores.csv
+!feature_importance_*.csv
